@@ -10,6 +10,14 @@ import 'package:super_sliver_list/super_sliver_list.dart';
 
 import 'item.dart';
 
+enum ConnectionSortType {
+  none,
+  downloadDesc,
+  downloadAsc,
+  uploadDesc,
+  uploadAsc,
+}
+
 class ConnectionsView extends ConsumerStatefulWidget {
   const ConnectionsView({super.key});
 
@@ -22,11 +30,64 @@ class _ConnectionsViewState extends ConsumerState<ConnectionsView> {
     const TrackerInfosState(),
   );
   final ScrollController _scrollController = ScrollController();
+  ConnectionSortType _sortType = ConnectionSortType.none;
 
   Timer? timer;
 
+  String _getSortLabel(ConnectionSortType sortType) {
+    return switch (sortType) {
+      ConnectionSortType.none => appLocalizations.defaultText,
+      ConnectionSortType.downloadDesc => '${appLocalizations.download} ↓',
+      ConnectionSortType.downloadAsc => '${appLocalizations.download} ↑',
+      ConnectionSortType.uploadDesc => '${appLocalizations.upload} ↓',
+      ConnectionSortType.uploadAsc => '${appLocalizations.upload} ↑',
+    };
+  }
+
+  int _compareConnections(TrackerInfo a, TrackerInfo b) {
+    final result = switch (_sortType) {
+      ConnectionSortType.none => 0,
+      ConnectionSortType.downloadDesc => b.download.compareTo(a.download),
+      ConnectionSortType.downloadAsc => a.download.compareTo(b.download),
+      ConnectionSortType.uploadDesc => b.upload.compareTo(a.upload),
+      ConnectionSortType.uploadAsc => a.upload.compareTo(b.upload),
+    };
+    if (result != 0) {
+      return result;
+    }
+    return b.start.compareTo(a.start);
+  }
+
+  List<TrackerInfo> _sortConnections(List<TrackerInfo> connections) {
+    if (_sortType == ConnectionSortType.none) {
+      return connections;
+    }
+    final sortedConnections = List<TrackerInfo>.from(connections);
+    sortedConnections.sort(_compareConnections);
+    return sortedConnections;
+  }
+
   List<Widget> _buildActions() {
     return [
+      PopupMenuButton<ConnectionSortType>(
+        tooltip: '${appLocalizations.sort}: ${_getSortLabel(_sortType)}',
+        icon: const Icon(Icons.swap_vert),
+        onSelected: (sortType) {
+          setState(() {
+            _sortType = sortType;
+          });
+        },
+        itemBuilder: (context) {
+          return [
+            for (final item in ConnectionSortType.values)
+              CheckedPopupMenuItem<ConnectionSortType>(
+                value: item,
+                checked: item == _sortType,
+                child: Text(_getSortLabel(item)),
+              ),
+          ];
+        },
+      ),
       IconButton(
         onPressed: () async {
           coreController.closeConnections();
@@ -96,7 +157,7 @@ class _ConnectionsViewState extends ConsumerState<ConnectionsView> {
       body: ValueListenableBuilder<TrackerInfosState>(
         valueListenable: _connectionsStateNotifier,
         builder: (context, state, _) {
-          final connections = state.list;
+          final connections = _sortConnections(state.list);
           if (connections.isEmpty) {
             return NullStatus(
               label: appLocalizations.nullTip(appLocalizations.connections),
