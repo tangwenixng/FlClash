@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/metacubex/mihomo/adapter"
 	"github.com/metacubex/mihomo/adapter/inbound"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
@@ -35,6 +36,7 @@ var (
 	isRunning     = false
 	runLock       sync.Mutex
 	mBatch, _     = batch.New[bool](context.Background(), batch.WithConcurrencyNum[bool](50))
+	debugError    = false
 )
 
 func getExternalProvidersRaw() map[string]cp.Provider {
@@ -256,4 +258,11 @@ func UnmarshalJson(data []byte, v any) error {
 	decoder.UseNumber()
 	err := decoder.Decode(v)
 	return err
+}
+
+func logError(format string, args ...interface{}) {
+	log.Errorln(format, args...)
+	if debugError {
+		fmt.Fprintf(os.Stderr, "[ERROR] "+format+"\n", args...)
+	}
 }
