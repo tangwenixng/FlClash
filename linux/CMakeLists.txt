@@ -75,6 +75,10 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# flutter_js 0.8.7 does not export its prebuilt QuickJS library correctly.
+set(FLUTTER_JS_QUICKJS_LIBRARY
+  "${FLUTTER_MANAGED_DIR}/ephemeral/.plugin_symlinks/flutter_js/linux/shared/libquickjs_c_bridge_plugin.so")
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build
@@ -106,6 +110,10 @@ foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endforeach(bundled_library)
+
+install(FILES "${FLUTTER_JS_QUICKJS_LIBRARY}"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
 
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/linux/")
